@@ -71,6 +71,15 @@ class Invoice(models.Model):
     class Meta:
         db_table = "invoice"
 
+class UserCourse(models.Model):
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    course_progress = models.FloatField(default=0.0)
+
+    class Meta:
+        db_table = "user_course"
+
 
 class RatingReview(models.Model):
     id = models.AutoField(primary_key=True)

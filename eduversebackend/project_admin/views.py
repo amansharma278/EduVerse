@@ -5,7 +5,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from pyexpat.errors import messages
 
-from project_admin.models import User, Course, Section, SubSection, Invoice
+from project_admin.models import User, Course, Section, SubSection, Invoice, UserCourse
 
 
 # Create your views here.
@@ -166,6 +166,23 @@ def failed_response(failed_msg, success_status):
         "success":  success_status
     })
 
-
+@csrf_exempt
 def user_course(req):
     data = json.loads(req.body)
+    user_id = data.get('user_id')
+    course_id = data.get('course_id')
+
+    if not user_id or not user_id:
+        return failed_response("provide failed user id and course id","False")
+    else:
+        course = Course.objects.filter(id = course_id).first()
+        user = User.objects.filter(id = user_id).first()
+
+        user_course_response= UserCourse.objects.create(
+            user = user,
+            course = course
+        )
+
+        return successful_response("course and user id are successfully created in database","True")
+
+
