@@ -5,7 +5,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from pyexpat.errors import messages
 
-from project_admin.models import User, Course, Section, SubSection, Invoice, UserCourse
+from project_admin.models import User, Course, Section, SubSection, Invoice, UserCourse, Tag, CourseTag
 
 
 # Create your views here.
@@ -149,21 +149,21 @@ def generate_invoice(req):
 
         invoices_res = Invoice(user = user, course = course, price = price)
         invoices_res.save()
-        return successful_response("Invoice is successfully generate", "True")
+        return successful_response("Invoice is successfully generate")
     else:
-        return failed_response("course id or user id are not found","False")
+        return failed_response("course id or user id are not found")
 
 
 
-def successful_response(success_msg, success_status):
+def successful_response(success_msg):
     return JsonResponse({
         "message": success_msg,
-        "success":  success_status
+        "success":  "True"
     })
-def failed_response(failed_msg, success_status):
+def failed_response(failed_msg):
     return JsonResponse({
         "message": failed_msg,
-        "success":  success_status
+        "success":  "False"
     })
 
 @csrf_exempt
@@ -185,4 +185,75 @@ def user_course(req):
 
         return successful_response("course and user id are successfully created in database","True")
 
+@csrf_exempt
+def add_tag(req):
+    data = json.loads(req.body)
+    name = data.get('name')
+    description = data.get('description')
+
+    if not name or not description:
+        return failed_response("You need to Enter name or descriptions")
+    else:
+        add_tag_res = Tag.objects.create(name = name,description = description)
+
+        return successful_response("You have create a tag successfully")
+
+@csrf_exempt
+def course_tag(req):
+    data = json.loads(req.body)
+    course_id = data.get('course_id')
+    tag_id = data.get('tag_id')
+
+    if not course_id or not tag_id:
+        return JsonResponse({
+            "message": "Please enter the course id and tag id",
+            "success": "False"
+        })
+    else:
+        course= Course.objects.filter(id = course_id).first()
+        tag = Tag.objects.filter(id = tag_id).first()
+        course_tag_res = CourseTag.objects.create(course = course, tag = tag)
+
+        return successful_response("You have saved course id and Tag id")
+@csrf_exempt
+def get_all_user(req):
+
+    users = User.objects.all()
+    users_json =[]
+
+    for user in users:
+
+        user_json = {
+            "id": user.id,
+            "name":user.name,
+            "email": user.email,
+            "contact_no": user.contact_no,
+            "password": user.password,
+            "account_type": user.account_type,
+            "is_active":user.is_active,
+            "gender": user.gender,
+            "dob": user.dob,
+            "about": user.about
+        }
+        users_json.append(user_json)
+
+    return JsonResponse({"users": users_json })
+
+@csrf_exempt
+def get_all_courses(req):
+    courses = Course.objects.all()
+    course_objs = []
+
+    for course in courses:
+        course_obj = {
+            "id": course.id,
+            "course_name": course.course_name,
+            "course_description": course.course_description,
+            "instructor": course.instructor,
+            "what_you_will_learn": course.what_you_will_learn,
+            "price":course.price,
+            "thumbnail":course.thumbnail
+        }
+        course_objs.append(course_obj)
+    return JsonResponse({"courses": course_objs})
 
