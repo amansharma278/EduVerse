@@ -172,18 +172,19 @@ def user_course(req):
     user_id = data.get('user_id')
     course_id = data.get('course_id')
 
-    if not user_id or not user_id:
-        return failed_response("provide failed user id and course id","False")
-    else:
-        course = Course.objects.filter(id = course_id).first()
-        user = User.objects.filter(id = user_id).first()
+    if not user_id or not course_id:
+        return failed_response("User id and course id is required")
 
-        user_course_response= UserCourse.objects.create(
-            user = user,
-            course = course
-        )
+    course = Course.objects.filter(id = course_id).first()
+    user = User.objects.filter(id = user_id).first()
+    if not course:
+        return failed_response("The course id is not not exists in database")
+    if not user:
+        return failed_response("This user id is not exist in the database")
 
-        return successful_response("course and user id are successfully created in database","True")
+    user_course_response= UserCourse.objects.create( user = user, course = course)
+
+    return successful_response("course and user id are successfully created in database")
 
 @csrf_exempt
 def add_tag(req):
@@ -239,6 +240,37 @@ def get_all_user(req):
 
     return JsonResponse({"users": users_json })
 
+
+@csrf_exempt
+def get_user_by_id(req):
+    user_id = req.GET.get('user_id')
+    print(user_id)
+    if not user_id:
+       return failed_response("User id is required")
+
+    user = User.objects.filter(id=user_id).first()
+    print(user)
+
+    if not user:
+        return failed_response("User does not exist in Database")
+
+    user_obj={
+            "id": user.id,
+            "name":user.name,
+            "email": user.email,
+            "contact_no": user.contact_no,
+            "account_type": user.account_type,
+            "is_active":user.is_active,
+            "gender": user.gender,
+            "dob": user.dob,
+            "about": user.about
+        }
+    return JsonResponse({
+            "message": "user id is successfully found",
+            "user": user_obj
+        })
+
+
 @csrf_exempt
 def get_all_courses(req):
     courses = Course.objects.all()
@@ -256,4 +288,189 @@ def get_all_courses(req):
         }
         course_objs.append(course_obj)
     return JsonResponse({"courses": course_objs})
+@csrf_exempt
+def get_course_by_id(req):
+    course_id = req.GET.get('id')
+
+    if not course_id:
+      return failed_response("course id is required")
+
+    course = Course.objects.filter(id = course_id).first()
+
+    if not course:
+      return failed_response("This course is not exist")
+
+    course_objs = []
+
+    course_obj = {
+        "id": course.id,
+        "course_name": course.course_name,
+        "course_description": course.course_description,
+        "instructor": course.instructor,
+        "what_you_will_learn": course.what_you_will_learn,
+        "price": course.price,
+        "thumbnail": course.thumbnail
+    }
+    course_objs.append(course_obj)
+    return JsonResponse({"courses":course_objs})
+@csrf_exempt
+def get_sections(req):
+
+    sections = Section.objects.all()
+    sec_objs =[]
+    if not sections:
+        return failed_response("There no sections")
+
+    for section in sections:
+        sec_obj = {
+            "id": section.id,
+            "section_name": section.sec_name,
+            "course_id": section.course.id
+        }
+        sec_objs.append(sec_obj)
+    return JsonResponse({"sections": sec_objs})
+@csrf_exempt
+def get_section_by_id(req):
+    sec_id = req.GET.get('id')
+
+    if not sec_id:
+        return failed_response("Id failed is required")
+    response = Section.objects.filter(id = sec_id).first()
+
+    if not response:
+        return failed_response("The id is not present in the db")
+
+    return JsonResponse({
+        "message": "Successfully fetched",
+        "id": response.id
+    })
+
+@csrf_exempt
+def get_sub_section(req):
+
+    responses = SubSection.objects.all()
+
+    if not responses:
+        failed_response("No subsection are availaible in the database")
+    sub_sec_jsons= []
+    for resonse in responses:
+        sub_json = {
+            "id": resonse.id,
+            "section_id": resonse.section.id,
+            "title":resonse.title,
+            "timeDuration": resonse.time_durastation,
+            "descriptions": resonse.description,
+            "videoUrl": resonse.video_url,
+
+        }
+        sub_sec_jsons.append(sub_json)
+
+    return JsonResponse({
+            "messages": "You have successfully fetched sub section data",
+            "Subsections":sub_sec_jsons
+        })
+
+@csrf_exempt
+def get_sub_section_by_id(req):
+    sub_id = req.GET.get('id')
+
+    if not sub_id:
+        return failed_response("Id failed is required")
+    response = SubSection.objects.filter(id = sub_id).first()
+
+    if not response:
+        return failed_response("No id present in the database")
+
+    return JsonResponse({
+        "message": "Id successfully fetched",
+        "id": response.id
+    })
+
+@csrf_exempt
+def get_all_invoices(req):
+
+    responses = Invoice.objects.all()
+
+    if not responses:
+        return failed_response("No Invoices are in the database")
+
+    invoice_objs = []
+
+    for response in responses:
+        invoice_obj = {
+            "id": response.id,
+            "user": response.user.id,
+            "course": response.course.id,
+            "price": response.price
+        }
+        invoice_objs.append(invoice_obj)
+
+    return JsonResponse({
+        "message:" :"successfully fetched all invoices",
+        "responses": invoice_objs
+
+    })
+@csrf_exempt
+def get_invoices_by_id(req):
+
+    invoices_id = req.GET.get('id')
+    if not invoices_id:
+        return failed_response("Id failed is required")
+
+    response = Invoice.objects.filter(id= invoices_id).first()
+
+    if not response:
+        return failed_response("This invoices id is not in the database")
+    invoice_obj = {
+        "id": response.id,
+        "user": response.user.id,
+        "course": response.course.id,
+        "price": response.price
+    }
+    return JsonResponse({
+        "message": "successfully fetched",
+        "invoices": invoice_obj
+    })
+@csrf_exempt
+def get_all_tag(req):
+    responses = Tag.objects.all()
+
+    if not responses:
+        return failed_response("No Tag are present")
+    tag_objs = []
+    for response in responses:
+        tag_obj = {
+            "id": response.id,
+            "name": response.name,
+            "descriptions": response.description
+        }
+        tag_objs.append(tag_obj)
+
+    return JsonResponse({
+        "message": "successfully fetched the Tags",
+        "Tags": tag_objs
+    })
+@csrf_exempt
+def get_tag_by_id(req):
+    tag_id = req.GET.get('id')
+
+    if not tag_id:
+        return failed_response("Id failed is required")
+    response = Tag.objects.filter(id = tag_id).first()
+
+    if not response:
+        return failed_response("This tag is not in the Db")
+    tag_obj = {
+        "id": response.id,
+        "name": response.name,
+        "descriptions": response.description
+    }
+
+    return JsonResponse({
+        "message": "successfully fetched the Tag",
+        "Tag": tag_obj
+    })
+
+# def get_user_course_by_id(req):
+
 
