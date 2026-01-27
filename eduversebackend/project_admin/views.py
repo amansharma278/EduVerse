@@ -470,7 +470,35 @@ def get_tag_by_id(req):
         "message": "successfully fetched the Tag",
         "Tag": tag_obj
     })
+@csrf_exempt
+def get_user_course_by_id(req):
+    user_id = req.GET.get('id')
+    responses = UserCourse.objects.filter(user = user_id).all()
 
-# def get_user_course_by_id(req):
+    if not responses:
+        return failed_response("This user id does not exist")
+    user_courses_objs = []
+    print(len(responses))
+    for response in responses:
+        user_course_obj = {
+            "course_id": response.course.id,
+            "course_name": response.course.course_name,
+            "course_progress": response.course_progress,
+            "course_instructor": response.course.instructor,
+            "course_descriptions": response.course.course_description
+        }
+        user_courses_objs.append(user_course_obj)
+
+    if not user_courses_objs:
+        return failed_response("This user does not have any courses")
+
+    return JsonResponse({
+        "message": "successfully fetched all user courses",
+        "user_courses" : user_courses_objs
+    })
+
+
+
+
 
 
