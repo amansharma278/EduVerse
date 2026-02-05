@@ -1,57 +1,91 @@
 import json
+from datetime import datetime, timedelta
 
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from pyexpat.errors import messages
 
-from project_admin.models import User, Course, Section, SubSection, Invoice, UserCourse, Tag, CourseTag
+from project_admin.models import User, Course, Section, SubSection, Invoice, UserCourse, Tag, CourseTag, Token
+from project_admin.utils import generate_token
 
 
 # Create your views here.
 @csrf_exempt
 def add_user(req):
-    data =json.loads(req.body)
-
-    name = data['name']
-    email = data['email']
-    contact_no= data['contact_no']
-    password = data['password']
-    account_type = data['account_type']
-    gender = data['gender']
-    dob = data['dob']
-    about = data['about']
-
-    if name and email and password and contact_no and account_type:
-        is_user_exist = User.objects.filter(email=email).first()
-
-        if account_type == 'admin':
+    try:
+        data = json.loads(req.body)
+        name = data.get('name')
+        email = data.get('email')
+        contact_no = data.get('contact_no')
+        password = data.get('password')
+        account_type = data.get('account_type')
+        gender = data.get('gender')
+        dob = data.get('dob')
+        about = data.get('about')
+        if not all([name,email,contact_no,password,account_type,gender]):
             return JsonResponse({
-                "messages" : "You are not permited",
-                "status": "failure"
+            "message": "Check every input should be field",
+            "success": "false"
             })
-
-        # finding dublicates value
-        if not is_user_exist:
-            user = User(name = name, email = email, contact_no=contact_no,password=password,account_type=account_type,gender=gender,dob=dob,about=about)
-            user.save()
-
+        user = User.objects.filter(email=email).first()
+        if user:
             return JsonResponse({
-                "message": "You have successfully Registered",
-                "status" : "success"
-            }, status=200)
-        else:
-            return JsonResponse({
-                "message": "User is already exist",
-                "status": "failure"
-            })
-
-
-    else:
-        return JsonResponse({
-            "message": "check every filed should be field"
-            "status" "failure"
+            "message": 'This user is already exits',
+            "success": "false"
         })
+        print(data)
+        User.objects.create(name = name,
+                                        email = email,
+                                        password= password,
+                                        account_type=account_type,
+                                        contact_no=contact_no,
+                                        dob=dob,
+                                        about=about,
+                                        gender = gender
+
+                                        )
+        return JsonResponse({
+        "message": "You have successfully registered",
+        "success": "true" })
+    except Exception as e:
+        return JsonResponse({
+            "message": str(e),
+            "success": "false"
+
+        },status=500)
+
+    #
+    # if name and email and password and contact_no and account_type:
+    #     is_user_exist = User.objects.filter(email=email).first()
+    #
+    #     if account_type == 'admin':
+    #         return JsonResponse({
+    #             "messages" : "only authorized user can login to the admin pannel",
+    #             "success": "false"
+    #         })
+    #
+    #     # finding dublicates value
+    #     if not is_user_exist:
+    #         user = User(name = name, email = email, contact_no=contact_no,password=password,account_type=account_type,gender=gender,dob=dob,about=about)
+    #         user.save()
+    #
+    #         return JsonResponse({
+    #             "message": "You have successfully Registered",
+    #             "success": "true"
+    #         }, status=200)
+    #     else:
+    #         return JsonResponse({
+    #             "message": "User is already exist",
+    #             "success": "false"
+    #         })
+    #
+    #
+    # else:
+    #     return JsonResponse({
+    #         "message": "check every filed should be field",
+    #         "success": "false"
+    #     })
 
 @csrf_exempt
 def add_course(req):
@@ -485,7 +519,8 @@ def get_user_course_by_id(req):
             "course_name": response.course.course_name,
             "course_progress": response.course_progress,
             "course_instructor": response.course.instructor,
-            "course_descriptions": response.course.course_description
+            "course_descriptions": response.course.course_description,
+            'thumbnail': response.course.thumbnail
         }
         user_courses_objs.append(user_course_obj)
 
@@ -496,6 +531,53 @@ def get_user_course_by_id(req):
         "message": "successfully fetched all user courses",
         "user_courses" : user_courses_objs
     })
+@csrf_exempt
+def login(req):
+    data = json.loads(req.body)
+    email = data.get('email')
+    password = data.get('password')
+    print(email)
+    print(password)
+    if not email or not password:
+        return failed_response("Email and password are required")
+
+    user = User.objects.filter(email = email).first()
+
+    if not user:
+        return failed_response("This user does not exist")
+
+    user_password = user.password
+
+    if password == user_password:
+        token = generate_token(16)
+
+        save_token = Token.objects.create(token = token,user=user,issue_at = datetime.now(),expired_at=datetime.now()+timedelta(hours=1))
+
+        return JsonResponse({
+            "message": "You have successfully logged in to your account",
+            "token": save_token.token,
+            "issue_at": save_token.issue_at,
+            "expired_at": save_token.expired_at,
+            "success": "true",
+
+            "user":{
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "contact_no": user.contact_no,
+                "account_type": user.account_type,
+                "is_active": user.is_active,
+                "gender": user.gender,
+                "dob": user.dob,
+                "about": user.about
+            }
+
+        })
+    else:
+        return failed_response("You have entered wrong passwords")
+
+
+
 
 
 
